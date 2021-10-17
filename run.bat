@@ -1,0 +1,1 @@
+flutter run -vv --no-sound-null-safety
