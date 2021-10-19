@@ -1,4 +1,5 @@
 import 'package:datos/model.dart';
+import 'package:datos/models/all.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,10 +8,19 @@ import 'package:sim_data/sim_data.dart';
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:ussd_service/ussd_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'models/all.dart';
 
-final moneyProvider = StateProvider<String?>((_) => null);
-final dataProvider = StateProvider<String?>((_) => null);
-final bonusProvider = StateProvider<String?>((_) => null);
+final dataProvider = StateProvider<Cubacel>((_) => Cubacel(
+    internet: Internet.fromJson({}),
+    credit: Credit.fromJson({}),
+    others: Others.fromJson({})
+));
+
+final prevDataProvider = StateProvider<Cubacel>((_) => Cubacel(
+    internet: Internet.fromJson({}),
+    credit: Credit.fromJson({}),
+    others: Others.fromJson({})
+));
 
 Future<int> getSimCardsData() async {
   try {
@@ -44,7 +54,7 @@ Future<String> makeUSSDRequest(String code, int? subscriptionId) async {
   }
 }
 
-Future<void> getCubacelData() async {
+Future<Cubacel> getCubacelData() async {
   int subscription;
   /*if (!(await Permission.phone.request().isGranted)) {
     print('Permision denied');
@@ -55,9 +65,12 @@ Future<void> getCubacelData() async {
   //String response = await makeUSSDRequest("*222#", subscription);
   String response = "Saldo: 435.54 CUP. Datos: 916.89 MB + 504.32 MB LTE. Voz: 00:08:44. SMS: 166. Linea activa hasta 06-09-22 vence 06-10-22.";
   //String response2 = await makeUSSDRequest("*222*266#", subscription);
-  String response2 = "Bono->vence: Datos 553.75 MB->10-11-21. MIN 00:27:11->10-11-21.";
+  String response2 = "Bono->vence: Datos 553.75 MB->10-11-21. MIN 00:27:11->10-11-21. Datos.cu 300.00 MB->10-11-21.";
 
-  Cubacel.fromUssd(response, response2);
+  Cubacel cubacel = fromUssd(response, response2);
+
+  return cubacel;
+
 }
 
 void main() {
@@ -108,14 +121,18 @@ class VarText extends ConsumerWidget {
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends ConsumerWidget {
   final String title;
 
   const MyHomePage({required this.title, Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer(builder: (context, watch, child) {
+  Widget build(BuildContext context, ScopedReader watch) {
+      final Cubacel currentData = watch(dataProvider).state;
+      final Cubacel prevData = watch(prevDataProvider).state;
+      final Cubacel delta = computeDelta(currentData, prevData);
+      final TextStyle textTableStyle = TextStyle(fontWeight: FontWeight.w600);
+
       return Scaffold(
         appBar: AppBar(
           // Here we take the value from the MyHomePage object that was created by
@@ -125,6 +142,7 @@ class MyHomePage extends StatelessWidget {
         body: Center(
           // Center is a layout widget. It takes a single child and positions it
           // in the middle of the parent.
+          child: SingleChildScrollView(
           child: Column(
             // Column is also a layout widget. It takes a list of children and
             // arranges them vertically. By default, it sizes itself to fit its
@@ -148,9 +166,12 @@ class MyHomePage extends StatelessWidget {
                   Expanded(
                       child: Center(
                           child: Text(
-                    'Internet',
+                    'Internet (MB)',
                     style: TextStyle(
-                        backgroundColor: Color.fromRGBO(255, 255, 255, 1)),
+                        backgroundColor: Color.fromRGBO(255, 255, 255, 1),
+                        fontSize: 18,
+                      fontWeight: FontWeight.bold
+                    )
                   )))
                 ],
               ),
@@ -159,7 +180,9 @@ class MyHomePage extends StatelessWidget {
                       MaterialStateProperty.all(Color.fromRGBO(92, 92, 92, 1)),
                   headingTextStyle: TextStyle(
                       color: Color.fromRGBO(255, 255, 255, 1),
-                      fontWeight: FontWeight.bold),
+                      fontWeight: FontWeight.bold,
+                    fontSize: 16
+                  ),
                   columns: [
                     DataColumn(label: Text('Servicio')),
                     DataColumn(label: Text('Valor')),
@@ -167,32 +190,96 @@ class MyHomePage extends StatelessWidget {
                   ],
                   rows: [
                     DataRow(cells: [
-                      DataCell(Text('cell 11')),
-                      DataCell(Text('cell 12')),
-                      DataCell(Text('cell 13'))
+                      DataCell(Text('Datos',style: textTableStyle,)),
+                      DataCell(Text(currentData.internet.all_networks.toString(),style: textTableStyle)),
+                      DataCell(Text((currentData.internet.all_networks!-prevData.internet.all_networks!).toString(),style: textTableStyle))
                     ]),
                     DataRow(cells: [
-                      DataCell(Text('cell 21')),
-                      DataCell(Text('cell 22')),
-                      DataCell(Text('cell 23'))
+                      DataCell(Text('LTE',style: textTableStyle)),
+                      DataCell(Text(currentData.internet.only_lte.toString(),style: textTableStyle)),
+                      DataCell(Text((currentData.internet.only_lte!-prevData.internet.only_lte!).toString(),style: textTableStyle))
                     ]),
                     DataRow(cells: [
-                      DataCell(Text('cell 31')),
-                      DataCell(Text('cell 32')),
-                      DataCell(Text('cell 33'))
+                      DataCell(Text('Bono Datos',style: textTableStyle)),
+                      DataCell(Text(currentData.internet.promotional_data.toString(),style: textTableStyle)),
+                      DataCell(Text((currentData.internet.promotional_data!-prevData.internet.promotional_data!).toString(),style: textTableStyle))
+                    ]),
+                    DataRow(cells: [
+                      DataCell(Text('Datos.cu',style: textTableStyle)),
+                      DataCell(Text(currentData.internet.national_data.toString(),style: textTableStyle)),
+                      DataCell(Text((currentData.internet.national_data!-prevData.internet.national_data!).toString(),style: textTableStyle))
+                    ])
+                  ]),
+              SizedBox(height: 20),
+              Flex(
+                direction: Axis.horizontal,
+                children: [
+                  Expanded(
+                      child: Center(
+                          child: Text(
+                              'Saldo, Voz y Minutos',
+                              style: TextStyle(
+                                  backgroundColor: Color.fromRGBO(255, 255, 255, 1),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold
+                              )
+                          )))
+                ],
+              ),
+              DataTable(
+                  headingRowColor:
+                  MaterialStateProperty.all(Color.fromRGBO(92, 92, 92, 1)),
+                  headingTextStyle: TextStyle(
+                      color: Color.fromRGBO(255, 255, 255, 1),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16
+                  ),
+                  columns: [
+                    DataColumn(label: Text('Servicio')),
+                    DataColumn(label: Text('Valor')),
+                    DataColumn(label: Text('Delta'))
+                  ],
+                  rows: [
+                    DataRow(cells: [
+                      DataCell(Text('Saldo',style: textTableStyle,)),
+                      DataCell(Text(currentData.credit.credit_normal.toString(),style: textTableStyle)),
+                      DataCell(Text((currentData.credit.credit_normal!-prevData.credit.credit_normal!).toString(),style: textTableStyle))
+                    ]),
+                    DataRow(cells: [
+                      DataCell(Text('Saldo Bono',style: textTableStyle)),
+                      DataCell(Text(currentData.credit.credit_bonus.toString(),style: textTableStyle)),
+                      DataCell(Text((currentData.credit.credit_bonus!-prevData.credit.credit_bonus!).toString(),style: textTableStyle))
+                    ]),
+                    DataRow(cells: [
+                      DataCell(Text('SMS',style: textTableStyle)),
+                      DataCell(Text(currentData.others.sms.toString(),style: textTableStyle)),
+                      DataCell(Text((currentData.others.sms!-prevData.others.sms!).toString(),style: textTableStyle))
+                    ]),
+                    DataRow(cells: [
+                      DataCell(Text('Minutos',style: textTableStyle)),
+                      DataCell(Text(minutesToString(currentData.others.minutes!),style: textTableStyle)),
+                      DataCell(Text(minutesToString((currentData.others.minutes!-prevData.others.minutes!)),style: textTableStyle))
+                    ]),
+                    DataRow(cells: [
+                      DataCell(Text('Bono Minutos',style: textTableStyle)),
+                      DataCell(Text(minutesToString(currentData.others.minutes_bonus!),style: textTableStyle)),
+                      DataCell(Text(minutesToString((currentData.others.minutes_bonus!-prevData.others.minutes_bonus!)),style: textTableStyle))
                     ])
                   ])
             ],
           ),
+          )
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
-            await getCubacelData();
+            Cubacel cData = await getCubacelData();
+            context.read(dataProvider).state = cData;
+            context.read(prevDataProvider).state = currentData;
           },
           tooltip: 'Increment',
           child: Icon(Icons.add),
         ), // This trailing comma makes auto-formatting nicer for build methods.
       );
-    });
+
   }
 }
