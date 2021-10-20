@@ -218,8 +218,6 @@ Cubacel computeDelta(Cubacel now, Cubacel prev) {
     iNow[key] = iNow[key]! - iPrev[key]!;
   }
 
-  print(iNow);
-
   Map<String, num> oNow = Map<String, num>.from(now.others.toJson());
   Map<String, num> oPrev = Map<String, num>.from(prev.others.toJson());
 
