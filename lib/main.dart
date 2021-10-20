@@ -3,24 +3,34 @@ import 'package:datos/models/all.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sembast/sembast.dart';
+import 'package:sembast/sembast_io.dart';
+
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:sim_data/sim_data.dart';
+
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:ussd_service/ussd_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/all.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as dPath;
+import 'package:intl/date_symbol_data_local.dart';
 
-final dataProvider = StateProvider<Cubacel>((_) => Cubacel(
-    internet: Internet.fromJson({}),
-    credit: Credit.fromJson({}),
-    others: Others.fromJson({})
-));
+Database? cubacelDb;
+Database? cacheCubacelDb;
+var store = StoreRef.main();
+final String dataKey = 'last';
+final String prevDataKey = 'plast';
+final String dbName = 'cubacel.db';
+final String cacheDbName = 'cacheCubacel.db';
 
-final prevDataProvider = StateProvider<Cubacel>((_) => Cubacel(
-    internet: Internet.fromJson({}),
-    credit: Credit.fromJson({}),
-    others: Others.fromJson({})
-));
+final dataProvider = StateProvider<Cubacel>((_) => throw UnimplementedError());
+
+final prevDataProvider =
+StateProvider<Cubacel>((_) => throw UnimplementedError());
+
+final loadingProvider = StateProvider<bool>((_) => false);
 
 Future<int> getSimCardsData() async {
   try {
@@ -63,19 +73,46 @@ Future<Cubacel> getCubacelData() async {
   //subscription = await getSimCardsData();
   subscription = 0;
   //String response = await makeUSSDRequest("*222#", subscription);
-  String response = "Saldo: 435.54 CUP. Datos: 916.89 MB + 504.32 MB LTE. Voz: 00:08:44. SMS: 166. Linea activa hasta 06-09-22 vence 06-10-22.";
+  String response =
+      "Saldo: 435.54 CUP. Datos: 1.3 GB + 404.32 MB LTE. Voz: 00:08:44. SMS: 150. Linea activa hasta 06-09-22 vence 06-10-22.";
   //String response2 = await makeUSSDRequest("*222*266#", subscription);
-  String response2 = "Bono->vence: Datos 553.75 MB->10-11-21. MIN 00:27:11->10-11-21. Datos.cu 300.00 MB->10-11-21.";
+  String response2 =
+      "Bono->vence: Datos 453.75 MB->10-11-21. MIN 00:27:11->10-11-21. Datos.cu 100.00 MB->10-11-21.";
 
   Cubacel cubacel = fromUssd(response, response2);
 
   return cubacel;
-
 }
 
-void main() {
+Future<void> main() async {
+  await initializeDateFormatting('es_ES', null);
+
+  var appDocDir = await getApplicationDocumentsDirectory();
+  String appDocPath = appDocDir.path;
+
+  String dbPath = dPath.join(appDocPath, dbName);
+  DatabaseFactory dbFactory = databaseFactoryIo;
+
+  Database db = await dbFactory.openDatabase(dbPath);
+  cubacelDb = db;
+
+  dbPath = dPath.join(appDocPath, cacheDbName);
+  db = await dbFactory.openDatabase(dbPath);
+  cacheCubacelDb = db;
+
+  var r = await store.record(dataKey).get(db);
+  r ??= getEmptyData().toJson();
+  r = Cubacel.fromJson(r);
+
+  var r2 = await store.record(prevDataKey).get(db);
+  r2 ??= getEmptyData().toJson();
+  r2 = Cubacel.fromJson(r2);
+
   runApp(
-    ProviderScope(child: MyApp()),
+    ProviderScope(child: MyApp(), overrides: [
+      dataProvider.overrideWithProvider(StateProvider<Cubacel>((_) => r)),
+      prevDataProvider.overrideWithProvider(StateProvider<Cubacel>((_) => r2))
+    ]),
   );
 }
 
@@ -104,182 +141,252 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class VarText extends ConsumerWidget {
-  final StateProvider<String?> provider;
-  const VarText(this.provider, {Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context, ScopedReader watch) {
-    final String? value = watch(this.provider).state;
-    String val;
-    if (value == null) {
-      val = '';
-    } else {
-      val = value;
-    }
-    return Text(val); // Hello world
-  }
-}
-
 class MyHomePage extends ConsumerWidget {
   final String title;
+  final TextStyle textTableStyle = TextStyle(fontWeight: FontWeight.w600);
+  final TextStyle headTextStyle = TextStyle(
+      color: Color.fromRGBO(60, 60, 60, 1),
+      backgroundColor: Color.fromRGBO(255, 255, 255, 1),
+      fontSize: 18,
+      fontWeight: FontWeight.bold);
 
-  const MyHomePage({required this.title, Key? key}) : super(key: key);
+  MyHomePage({required this.title, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, ScopedReader watch) {
-      final Cubacel currentData = watch(dataProvider).state;
-      final Cubacel prevData = watch(prevDataProvider).state;
-      final Cubacel delta = computeDelta(currentData, prevData);
-      final TextStyle textTableStyle = TextStyle(fontWeight: FontWeight.w600);
+    final bool loading = watch(loadingProvider).state;
+    final Cubacel currentData = watch(dataProvider).state;
+    final Cubacel prevData = watch(prevDataProvider).state;
+    final Cubacel delta = computeDelta(currentData, prevData);
 
-      return Scaffold(
-        appBar: AppBar(
-          // Here we take the value from the MyHomePage object that was created by
-          // the App.build method, and use it to set our appbar title.
-          title: Text(this.title),
-        ),
-        body: Center(
-          // Center is a layout widget. It takes a single child and positions it
-          // in the middle of the parent.
-          child: SingleChildScrollView(
-          child: Column(
-            // Column is also a layout widget. It takes a list of children and
-            // arranges them vertically. By default, it sizes itself to fit its
-            // children horizontally, and tries to be as tall as its parent.
-            //
-            // Invoke "debug painting" (press "p" in the console, choose the
-            // "Toggle Debug Paint" action from the Flutter Inspector in Android
-            // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-            // to see the wireframe for each widget.
-            //
-            // Column has various properties to control how it sizes itself and
-            // how it positions its children. Here we use mainAxisAlignment to
-            // center the children vertically; the main axis here is the vertical
-            // axis because Columns are vertical (the cross axis would be
-            // horizontal).
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Flex(
-                direction: Axis.horizontal,
-                children: [
-                  Expanded(
-                      child: Center(
-                          child: Text(
-                    'Internet (MB)',
-                    style: TextStyle(
-                        backgroundColor: Color.fromRGBO(255, 255, 255, 1),
-                        fontSize: 18,
-                      fontWeight: FontWeight.bold
-                    )
-                  )))
-                ],
-              ),
-              DataTable(
-                  headingRowColor:
-                      MaterialStateProperty.all(Color.fromRGBO(92, 92, 92, 1)),
-                  headingTextStyle: TextStyle(
-                      color: Color.fromRGBO(255, 255, 255, 1),
-                      fontWeight: FontWeight.bold,
-                    fontSize: 16
-                  ),
-                  columns: [
-                    DataColumn(label: Text('Servicio')),
-                    DataColumn(label: Text('Valor')),
-                    DataColumn(label: Text('Delta'))
-                  ],
-                  rows: [
-                    DataRow(cells: [
-                      DataCell(Text('Datos',style: textTableStyle,)),
-                      DataCell(Text(currentData.internet.all_networks.toString(),style: textTableStyle)),
-                      DataCell(Text((currentData.internet.all_networks!-prevData.internet.all_networks!).toString(),style: textTableStyle))
-                    ]),
-                    DataRow(cells: [
-                      DataCell(Text('LTE',style: textTableStyle)),
-                      DataCell(Text(currentData.internet.only_lte.toString(),style: textTableStyle)),
-                      DataCell(Text((currentData.internet.only_lte!-prevData.internet.only_lte!).toString(),style: textTableStyle))
-                    ]),
-                    DataRow(cells: [
-                      DataCell(Text('Bono Datos',style: textTableStyle)),
-                      DataCell(Text(currentData.internet.promotional_data.toString(),style: textTableStyle)),
-                      DataCell(Text((currentData.internet.promotional_data!-prevData.internet.promotional_data!).toString(),style: textTableStyle))
-                    ]),
-                    DataRow(cells: [
-                      DataCell(Text('Datos.cu',style: textTableStyle)),
-                      DataCell(Text(currentData.internet.national_data.toString(),style: textTableStyle)),
-                      DataCell(Text((currentData.internet.national_data!-prevData.internet.national_data!).toString(),style: textTableStyle))
-                    ])
-                  ]),
-              SizedBox(height: 20),
-              Flex(
-                direction: Axis.horizontal,
-                children: [
-                  Expanded(
-                      child: Center(
-                          child: Text(
-                              'Saldo, Voz y Minutos',
-                              style: TextStyle(
-                                  backgroundColor: Color.fromRGBO(255, 255, 255, 1),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold
-                              )
-                          )))
-                ],
-              ),
-              DataTable(
-                  headingRowColor:
-                  MaterialStateProperty.all(Color.fromRGBO(92, 92, 92, 1)),
-                  headingTextStyle: TextStyle(
-                      color: Color.fromRGBO(255, 255, 255, 1),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16
-                  ),
-                  columns: [
-                    DataColumn(label: Text('Servicio')),
-                    DataColumn(label: Text('Valor')),
-                    DataColumn(label: Text('Delta'))
-                  ],
-                  rows: [
-                    DataRow(cells: [
-                      DataCell(Text('Saldo',style: textTableStyle,)),
-                      DataCell(Text(currentData.credit.credit_normal.toString(),style: textTableStyle)),
-                      DataCell(Text((currentData.credit.credit_normal!-prevData.credit.credit_normal!).toString(),style: textTableStyle))
-                    ]),
-                    DataRow(cells: [
-                      DataCell(Text('Saldo Bono',style: textTableStyle)),
-                      DataCell(Text(currentData.credit.credit_bonus.toString(),style: textTableStyle)),
-                      DataCell(Text((currentData.credit.credit_bonus!-prevData.credit.credit_bonus!).toString(),style: textTableStyle))
-                    ]),
-                    DataRow(cells: [
-                      DataCell(Text('SMS',style: textTableStyle)),
-                      DataCell(Text(currentData.others.sms.toString(),style: textTableStyle)),
-                      DataCell(Text((currentData.others.sms!-prevData.others.sms!).toString(),style: textTableStyle))
-                    ]),
-                    DataRow(cells: [
-                      DataCell(Text('Minutos',style: textTableStyle)),
-                      DataCell(Text(minutesToString(currentData.others.minutes!),style: textTableStyle)),
-                      DataCell(Text(minutesToString((currentData.others.minutes!-prevData.others.minutes!)),style: textTableStyle))
-                    ]),
-                    DataRow(cells: [
-                      DataCell(Text('Bono Minutos',style: textTableStyle)),
-                      DataCell(Text(minutesToString(currentData.others.minutes_bonus!),style: textTableStyle)),
-                      DataCell(Text(minutesToString((currentData.others.minutes_bonus!-prevData.others.minutes_bonus!)),style: textTableStyle))
-                    ])
-                  ])
+    return Scaffold(
+      appBar: AppBar(
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(this.title),
+      ),
+      body: Center(
+        // Center is a layout widget. It takes a single child and positions it
+        // in the middle of the parent.
+          child: loading ? CircularProgressIndicator() : RefreshIndicator(
+          child: buildDataTabllesWidget(context,currentData,delta, prevData.date),
+            onRefresh: ()async {
+            await updateData(context, currentData);
+            },
+          ) ,
+    ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await updateData(context, currentData);
+        },
+        tooltip: 'Increment',
+        child: Icon(Icons.add),
+      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  Widget buildDataTabllesWidget(BuildContext context,
+      Cubacel currentData,
+      Cubacel delta,
+      DateTime prevDate) {
+    return SingleChildScrollView(
+      child: Column(
+        // Column is also a layout widget. It takes a list of children and
+        // arranges them vertically. By default, it sizes itself to fit its
+        // children horizontally, and tries to be as tall as its parent.
+        //
+        // Invoke "debug painting" (press "p" in the console, choose the
+        // "Toggle Debug Paint" action from the Flutter Inspector in Android
+        // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
+        // to see the wireframe for each widget.
+        //
+        // Column has various properties to control how it sizes itself and
+        // how it positions its children. Here we use mainAxisAlignment to
+        // center the children vertically; the main axis here is the vertical
+        // axis because Columns are vertical (the cross axis would be
+        // horizontal).
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Flex(
+            direction: Axis.horizontal,
+            children: [
+              Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Última Actualización: ', style: headTextStyle),
+                      Text('${dateToString(currentData.date)}',
+                          style:
+                          headTextStyle.copyWith(fontWeight: FontWeight.w600))
+                    ],
+                  ))
             ],
           ),
-          )
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () async {
-            Cubacel cData = await getCubacelData();
-            context.read(dataProvider).state = cData;
-            context.read(prevDataProvider).state = currentData;
-          },
-          tooltip: 'Increment',
-          child: Icon(Icons.add),
-        ), // This trailing comma makes auto-formatting nicer for build methods.
-      );
+          Flex(
+            direction: Axis.horizontal,
+            children: [
+              Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Penúltima Actualización: ', style: headTextStyle),
+                      Text('${dateToString(prevDate)}',
+                          style:
+                          headTextStyle.copyWith(fontWeight: FontWeight.w600))
+                    ],
+                  ))
+            ],
+          ),
+          SizedBox(height: 20),
+          Flex(
+            direction: Axis.horizontal,
+            children: [
+              Expanded(
+                  child: Center(
+                      child: Text('Internet (MB)', style: headTextStyle)))
+            ],
+          ),
+          DataTable(
+              headingRowColor:
+              MaterialStateProperty.all(Color.fromRGBO(92, 92, 92, 1)),
+              headingTextStyle: TextStyle(
+                  color: Color.fromRGBO(255, 255, 255, 1),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
+              columns: [
+                DataColumn(label: Text('Servicio')),
+                DataColumn(label: Text('Valor')),
+                DataColumn(label: Text('Delta'))
+              ],
+              rows: [
+                DataRow(cells: [
+                  DataCell(Text(
+                    'Datos',
+                    style: textTableStyle,
+                  )),
+                  DataCell(Text(
+                      internetToString(currentData.internet.all_networks!),
+                      style: textTableStyle)),
+                  DataCell(Text(
+                      internetToString(delta.internet.all_networks!),
+                      style: textTableStyle)),
+                ]),
+                DataRow(cells: [
+                  DataCell(Text('LTE', style: textTableStyle)),
+                  DataCell(Text(
+                      internetToString(currentData.internet.only_lte!),
+                      style: textTableStyle)),
+                  DataCell(Text(
+                      internetToString(delta.internet.only_lte!),
+                      style: textTableStyle)),
+                ]),
+                DataRow(cells: [
+                  DataCell(Text('Bono Datos', style: textTableStyle)),
+                  DataCell(Text(
+                      internetToString(
+                          currentData.internet.promotional_data!),
+                      style: textTableStyle)),
+                  DataCell(Text(
+                      internetToString(
+                          delta.internet.promotional_data!),
+                      style: textTableStyle)),
+                ]),
+                DataRow(cells: [
+                  DataCell(Text('Datos.cu', style: textTableStyle)),
+                  DataCell(Text(
+                      internetToString(currentData.internet.national_data!),
+                      style: textTableStyle)),
+                  DataCell(Text(
+                      internetToString(delta.internet.national_data!),
+                      style: textTableStyle)),
+                ])
+              ]),
+          SizedBox(height: 20),
+          Flex(
+            direction: Axis.horizontal,
+            children: [
+              Expanded(
+                  child: Center(
+                      child:
+                      Text('Saldo, Voz y Minutos', style: headTextStyle)))
+            ],
+          ),
+          DataTable(
+              headingRowColor:
+              MaterialStateProperty.all(Color.fromRGBO(92, 92, 92, 1)),
+              headingTextStyle: TextStyle(
+                  color: Color.fromRGBO(255, 255, 255, 1),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
+              columns: [
+                DataColumn(label: Text('Servicio')),
+                DataColumn(label: Text('Valor')),
+                DataColumn(label: Text('Delta'))
+              ],
+              rows: [
+                DataRow(cells: [
+                  DataCell(Text(
+                    'Saldo',
+                    style: textTableStyle,
+                  )),
+                  DataCell(Text(currentData.credit.credit_normal!.toStringAsFixed(2),
+                      style: textTableStyle)),
+                  DataCell(Text(delta.credit.credit_normal!.toStringAsFixed(2),
+                      style: textTableStyle)),
+                ]),
+                DataRow(cells: [
+                  DataCell(Text('Saldo Bono', style: textTableStyle)),
+                  DataCell(Text(currentData.credit.credit_bonus!.toStringAsFixed(2),
+                      style: textTableStyle)),
+                  DataCell(Text(delta.credit.credit_bonus!.toStringAsFixed(2),
+                      style: textTableStyle)),
+                ]),
+                DataRow(cells: [
+                  DataCell(Text('SMS', style: textTableStyle)),
+                  DataCell(Text(currentData.others.sms.toString(),
+                      style: textTableStyle)),
+                  DataCell(Text(delta.others.sms.toString(),
+                      style: textTableStyle)),
+                ]),
+                DataRow(cells: [
+                  DataCell(Text('Minutos', style: textTableStyle)),
+                  DataCell(Text(minutesToString(currentData.others.minutes!),
+                      style: textTableStyle)),
+                  DataCell(Text(minutesToString(delta.others.minutes!),
+                      style: textTableStyle)),
+                ]),
+                DataRow(cells: [
+                  DataCell(Text('Bono Minutos', style: textTableStyle)),
+                  DataCell(Text(
+                      minutesToString(currentData.others.minutes_bonus!),
+                      style: textTableStyle)),
+                  DataCell(Text(
+                      minutesToString(delta.others.minutes_bonus!),
+                      style: textTableStyle)),
+                ])
+              ])
+        ],
+      ),
+    );
+  }
 
+  Future<void> updateData(BuildContext context, Cubacel currentData ) async {
+    context
+        .read(loadingProvider)
+        .state = true;
+    await Future.delayed(Duration(seconds: 4));
+    Cubacel cData = await getCubacelData();
+          await store.add(cubacelDb!, cData.toJson());
+
+          cacheCubacelDb!.transaction((txn) async {
+            await store.record(dataKey).put(txn, cData.toJson());
+            await store.record(prevDataKey).put(txn, currentData.toJson());
+          });
+
+          context.read(dataProvider).state = cData;
+          context.read(prevDataProvider).state = currentData;
+    context
+        .read(loadingProvider)
+        .state = false;
   }
 }

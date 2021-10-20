@@ -1,34 +1,58 @@
 import 'models/all.dart';
+import 'package:intl/intl.dart';
 
-String minutesToString(num minutes){
+Cubacel getEmptyData() {
+  return Cubacel(
+      internet: Internet.fromJson({}),
+      credit: Credit.fromJson({}),
+      others: Others.fromJson({}));
+}
+
+String dateToString(DateTime date) {
+  // TODO: add internationalization
+  var format = DateFormat('MMMd yyyy hh:mm a', 'es_ES');
+  return format.format(date.toLocal());
+}
+
+String internetToString(num value) {
+  // asume value is in MB
+  num gb = value.abs() / 1024.0;
+  if (gb > 1) {
+    return '${value < 0 ? '-' : ''}${gb.toStringAsFixed(2)} GB';
+  }
+
+  return '${value.toStringAsFixed(2).toString()} MB';
+}
+
+String minutesToString(num minutes) {
   num pminutes = minutes.abs();
 
   num hour = pminutes / 60;
-  if(hour<1){
+  if (hour < 1) {
     hour = 0;
   }
-  num seconds = ((pminutes-pminutes.toInt())*60).round();
-  return '${minutes < 0 ? '-': ''}${hour.toInt()}:${pminutes.floor()}:${seconds}';
+  num seconds = ((pminutes - pminutes.toInt()) * 60).round();
+  return '${minutes < 0 ? '-' : ''}${hour.toInt()}:${pminutes < 10 ? '0' : ''}${pminutes.floor()}:${seconds}';
 }
 
-num getMinutes(List<String> minstr){
+num getMinutes(List<String> minstr) {
   num cont = 60;
   num vv;
   num mins = minstr.map((String e) {
     vv = num.parse(e) * cont;
     cont /= 60;
     return vv;
-  }).reduce((value, element) =>value + element);
+  }).reduce((value, element) => value + element);
 
   return mins;
 }
 
-num toMB(num value, String unit){
-  if(unit=="GB"){
-    return value*1024.0;
+num toMB(num value, String unit) {
+  if (unit == "GB") {
+    return value * 1024.0;
   }
-  if(unit=="KB"){
-    return value/1024.0;
+  if (unit == "KB") {
+    return value / 1024.0;
   }
 
   return value;
@@ -52,11 +76,13 @@ List<ParsedValue> getData(String value) {
   if (value.startsWith('Datos:')) {
     // TODO: test the case when only one of the network type exist like only LTE
     List<String> dd = value.split(':');
-    List<String> value_unit = dd[1].split('+').map((String e) => e.split(' ')[2].trim()).toList();
-    List<String> val = dd[1].split('+').map((String e) => e.split(' ')[1].trim()).toList();
+    List<String> value_unit =
+        dd[1].split('+').map((String e) => e.split(' ')[2].trim()).toList();
+    List<String> val =
+        dd[1].split('+').map((String e) => e.split(' ')[1].trim()).toList();
 
-    if(val.length == 1){
-      if(dd[1].contains("LTE")){
+    if (val.length == 1) {
+      if (dd[1].contains("LTE")) {
         val = ['0', val[0]];
       } else {
         val = [val[0], '0'];
@@ -110,7 +136,9 @@ List<ParsedValue> getData(String value) {
     return [
       ParsedValue(
           unit: dat[2],
-          fieldName: value.startsWith('Datos.cu') ? 'national_data' : 'promotional_data',
+          fieldName: value.startsWith('Datos.cu')
+              ? 'national_data'
+              : 'promotional_data',
           value: num.parse(dat[1].trim()),
           type: DataType.internet)
     ];
@@ -144,32 +172,31 @@ Cubacel fromUssd(String consult1, String consult2) {
   List<ParsedValue> pData = [];
   List<ParsedValue> ppData = [];
 
-  for(String datav in data){
+  for (String datav in data) {
     ppData = getData(datav.trim());
     pData.addAll(ppData);
   }
 
-  for(String datav in data2){
+  for (String datav in data2) {
     ppData = getData(datav.trim());
     pData.addAll(ppData);
-
   }
 
-  Map<String,num> internetFields = {};
-  Map<String,num> otherFields = {};
-  Map<String,num> creditFields = {};
+  Map<String, num> internetFields = {};
+  Map<String, num> otherFields = {};
+  Map<String, num> creditFields = {};
 
-  for(ParsedValue val in pData){
-    switch(val.type){
+  for (ParsedValue val in pData) {
+    switch (val.type) {
       case DataType.internet:
         num value = toMB(val.value, val.unit);
-        internetFields[val.fieldName]=value;
+        internetFields[val.fieldName] = value;
         break;
       case DataType.other:
-        otherFields[val.fieldName]=val.value;
+        otherFields[val.fieldName] = val.value;
         break;
       case DataType.credit:
-        creditFields[val.fieldName]=val.value;
+        creditFields[val.fieldName] = val.value;
         break;
     }
   }
@@ -180,46 +207,35 @@ Cubacel fromUssd(String consult1, String consult2) {
     'others': otherFields
   });
 
-  print(cubacel.toJson());
-
   return cubacel;
 }
 
-Cubacel computeDelta(Cubacel now, Cubacel prev){
-  Map<String,num> iNow = Map<String,num>.from(now.internet.toJson());
-  Map<String,num> iPrev = Map<String,num>.from(now.internet.toJson());
+Cubacel computeDelta(Cubacel now, Cubacel prev) {
+  Map<String, num> iNow = Map<String, num>.from(now.internet.toJson());
+  Map<String, num> iPrev = Map<String, num>.from(prev.internet.toJson());
 
-  for(String key in iNow.keys){
+  for (String key in iNow.keys) {
     iNow[key] = iNow[key]! - iPrev[key]!;
-
   }
 
-  Map<String,num> oNow = Map<String,num>.from(now.others.toJson());
-  Map<String,num> oPrev = Map<String,num>.from(now.others.toJson());
+  print(iNow);
 
-  for(String key in oNow.keys){
+  Map<String, num> oNow = Map<String, num>.from(now.others.toJson());
+  Map<String, num> oPrev = Map<String, num>.from(prev.others.toJson());
+
+  for (String key in oNow.keys) {
     oNow[key] = oNow[key]! - oPrev[key]!;
-
   }
 
-  Map<String,num> cNow = Map<String,num>.from(now.credit.toJson());
-  Map<String,num> cPrev = Map<String,num>.from(now.credit.toJson());
+  Map<String, num> cNow = Map<String, num>.from(now.credit.toJson());
+  Map<String, num> cPrev = Map<String, num>.from(prev.credit.toJson());
 
-  for(String key in cNow.keys){
+  for (String key in cNow.keys) {
     cNow[key] = cNow[key]! - cPrev[key]!;
-
   }
 
-  Cubacel delta =  Cubacel.fromJson({
-    'internet': iNow,
-    'credit': cNow,
-    'others': oNow
-  });
+  Cubacel delta =
+      Cubacel.fromJson({'internet': iNow, 'credit': cNow, 'others': oNow});
 
   return delta;
 }
-
-
-
-
-
