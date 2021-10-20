@@ -1,21 +1,19 @@
 import 'package:datos/model.dart';
 import 'package:datos/models/all.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:path/path.dart' as dPath;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
-
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:sim_data/sim_data.dart';
-
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:ussd_service/ussd_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import 'models/all.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as dPath;
-import 'package:intl/date_symbol_data_local.dart';
 
 Database? cubacelDb;
 Database? cacheCubacelDb;

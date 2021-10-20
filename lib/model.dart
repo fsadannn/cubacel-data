@@ -1,5 +1,6 @@
-import 'models/all.dart';
 import 'package:intl/intl.dart';
+
+import 'models/all.dart';
 
 Cubacel getEmptyData() {
   return Cubacel(
