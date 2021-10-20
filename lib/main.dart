@@ -8,8 +8,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
+
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:sim_data/sim_data.dart';
+
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:ussd_service/ussd_service.dart';
 
@@ -194,6 +196,7 @@ class MyHomePage extends ConsumerWidget {
     return ListView(
       shrinkWrap: true,
       children: <Widget>[
+        SizedBox(height: 10),
         Flex(
           direction: Axis.horizontal,
           children: [
@@ -373,7 +376,8 @@ class MyHomePage extends ConsumerWidget {
                           style: textTableStyle)),
                     ])
                   ])
-            ])
+            ]),
+        SizedBox(height: 60),
       ],
     );
   }
