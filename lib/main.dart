@@ -66,8 +66,13 @@ Future<String> makeUSSDRequest(String code, int? subscriptionId) async {
 
 Future<Cubacel> getCubacelData() async {
   int subscription;
-  if (!(await Permission.phone.request().isGranted)) {
-    print('Permision denied');
+  if(!(await Permission.phone.status).isGranted) {
+    if (!(await Permission.phone
+        .request()
+        .isGranted)) {
+      print('Permision denied');
+      throw("Permision denied");
+    }
   }
 // Either the permission was already granted before or the user just granted it.
   subscription = await getSimCardsData();
@@ -384,8 +389,13 @@ class MyHomePage extends ConsumerWidget {
 
   Future<void> updateData(BuildContext context, Cubacel currentData) async {
     context.read(loadingProvider).state = true;
-    //await Future.delayed(Duration(seconds: 4));
-    Cubacel cData = await getCubacelData();
+    Cubacel cData;
+    try {
+      cData = await getCubacelData();
+    } catch(e) {
+      print(e);
+      return;
+    }
     await store.add(cubacelDb!, cData.toJson());
 
     cacheCubacelDb!.transaction((txn) async {

@@ -88,6 +88,7 @@ List<ParsedValue> getData(String value) {
       } else {
         val = [val[0], '0'];
       }
+      value_unit = [value_unit[0],value_unit[0]];
     }
 
     return [
