@@ -56,6 +56,10 @@ num toMB(num value, String unit) {
     return value / 1024.0;
   }
 
+  if (unit == "B") {
+    return 0;
+  }
+
   return value;
 }
 
@@ -141,6 +145,19 @@ List<ParsedValue> getData(String value) {
           fieldName: value.startsWith('Datos.cu')
               ? 'national_data'
               : 'promotional_data',
+          value: num.parse(dat[1].trim()),
+          type: DataType.internet)
+    ];
+  }
+
+  if (value.startsWith('LTE')) {
+    String dd = value.split('->')[0].trim();
+    List<String> dat = dd.split(' ');
+
+    return [
+      ParsedValue(
+          unit: dat[2],
+          fieldName: 'promotional_data_lte',
           value: num.parse(dat[1].trim()),
           type: DataType.internet)
     ];

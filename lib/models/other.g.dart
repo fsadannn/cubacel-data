@@ -6,13 +6,11 @@ part of 'other.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-Others _$OthersFromJson(Map<String, dynamic> json) {
-  return Others(
-    sms: json['sms'] as num? ?? 0,
-    minutes: json['minutes'] as num? ?? 0,
-    minutes_bonus: json['minutes_bonus'] as num? ?? 0,
-  );
-}
+Others _$OthersFromJson(Map<String, dynamic> json) => Others(
+      sms: json['sms'] as num? ?? 0,
+      minutes: json['minutes'] as num? ?? 0,
+      minutes_bonus: json['minutes_bonus'] as num? ?? 0,
+    );
 
 Map<String, dynamic> _$OthersToJson(Others instance) => <String, dynamic>{
       'sms': instance.sms,

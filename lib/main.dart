@@ -246,7 +246,7 @@ class MyHomePage extends ConsumerWidget {
           children: [
             Expanded(
                 child:
-                    Center(child: Text('Internet (MB)', style: headTextStyle)))
+                    Center(child: Text('Internet', style: headTextStyle)))
           ],
         ),
         Flex(
@@ -294,6 +294,16 @@ class MyHomePage extends ConsumerWidget {
                         style: textTableStyle)),
                     DataCell(Text(
                         internetToString(delta.internet.promotional_data!),
+                        style: textTableStyle)),
+                  ]),
+                  DataRow(cells: [
+                    DataCell(Text('Bono LTE', style: textTableStyle)),
+                    DataCell(Text(
+                        internetToString(
+                            currentData.internet.promotional_data_lte!),
+                        style: textTableStyle)),
+                    DataCell(Text(
+                        internetToString(delta.internet.promotional_data_lte!),
                         style: textTableStyle)),
                   ]),
                   DataRow(cells: [
