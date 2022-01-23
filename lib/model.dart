@@ -32,8 +32,8 @@ String minutesToString(num minutes) {
   if (hour < 1) {
     hour = 0;
   }
-  num seconds = ((pminutes - pminutes.toInt()) * 60).round();
-  return '${minutes < 0 ? '-' : ''}${hour.toInt()}:${pminutes < 10 ? '0' : ''}${pminutes.floor()}:${seconds < 10 ? '0' : ''}${seconds}';
+  num seconds = ((pminutes - pminutes.floor()) * 60).round();
+  return '${minutes < 0 ? '-' : ''}${hour.toInt()}:${pminutes.floor()%60 < 10 ? '0' : ''}${pminutes.floor()%60}:${seconds < 10 ? '0' : ''}${seconds}';
 }
 
 num getMinutes(List<String> minstr) {
