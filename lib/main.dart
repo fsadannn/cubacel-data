@@ -66,12 +66,10 @@ Future<String> makeUSSDRequest(String code, int? subscriptionId) async {
 
 Future<Cubacel> getCubacelData() async {
   int subscription;
-  if(!(await Permission.phone.status).isGranted) {
-    if (!(await Permission.phone
-        .request()
-        .isGranted)) {
+  if (!(await Permission.phone.status).isGranted) {
+    if (!(await Permission.phone.request().isGranted)) {
       print('Permision denied');
-      throw("Permision denied");
+      throw ("Permision denied");
     }
   }
 // Either the permission was already granted before or the user just granted it.
@@ -245,8 +243,7 @@ class MyHomePage extends ConsumerWidget {
           direction: Axis.horizontal,
           children: [
             Expanded(
-                child:
-                    Center(child: Text('Internet', style: headTextStyle)))
+                child: Center(child: Text('Internet', style: headTextStyle)))
           ],
         ),
         Flex(
@@ -374,6 +371,13 @@ class MyHomePage extends ConsumerWidget {
                           style: textTableStyle)),
                     ]),
                     DataRow(cells: [
+                      DataCell(Text('Bono SMS', style: textTableStyle)),
+                      DataCell(Text(currentData.others.sms_bonus.toString(),
+                          style: textTableStyle)),
+                      DataCell(Text(delta.others.sms_bonus.toString(),
+                          style: textTableStyle)),
+                    ]),
+                    DataRow(cells: [
                       DataCell(Text('Minutos', style: textTableStyle)),
                       DataCell(Text(
                           minutesToString(currentData.others.minutes!),
@@ -402,7 +406,7 @@ class MyHomePage extends ConsumerWidget {
     Cubacel cData;
     try {
       cData = await getCubacelData();
-    } catch(e) {
+    } catch (e) {
       print(e);
       return;
     }

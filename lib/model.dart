@@ -33,7 +33,7 @@ String minutesToString(num minutes) {
     hour = 0;
   }
   num seconds = ((pminutes - pminutes.floor()) * 60).round();
-  return '${minutes < 0 ? '-' : ''}${hour.toInt()}:${pminutes.floor()%60 < 10 ? '0' : ''}${pminutes.floor()%60}:${seconds < 10 ? '0' : ''}${seconds}';
+  return '${minutes < 0 ? '-' : ''}${hour.toInt()}:${pminutes.floor() % 60 < 10 ? '0' : ''}${pminutes.floor() % 60}:${seconds < 10 ? '0' : ''}${seconds}';
 }
 
 num getMinutes(List<String> minstr) {
@@ -65,6 +65,7 @@ num toMB(num value, String unit) {
 
 List<ParsedValue> getData(String value) {
   // TODO: parse credit bonus
+  print(value);
 
   if (value.startsWith('Saldo:')) {
     List<String> value_unit = value.split(':')[1].trim().split(' ');
@@ -92,7 +93,7 @@ List<ParsedValue> getData(String value) {
       } else {
         val = [val[0], '0'];
       }
-      value_unit = [value_unit[0],value_unit[0]];
+      value_unit = [value_unit[0], value_unit[0]];
     }
 
     return [
@@ -125,12 +126,23 @@ List<ParsedValue> getData(String value) {
 
   if (value.startsWith('SMS:')) {
     String value_unit = "SMS";
+    List<String> dat = value.split(':');
+    List<String> dat2 = value.split(':')[1].trim().split(' ');
+    num sms = 0;
+    String fieldName = 'sms';
+
+    if (dat2.length < 3) {
+      sms = num.parse(dat[1].trim());
+    } else {
+      sms = num.parse(dat2[0].trim());
+      fieldName = 'sms_bonus';
+    }
 
     return [
       ParsedValue(
           unit: value_unit,
-          fieldName: 'sms',
-          value: num.parse(value.split(':')[1].trim()),
+          fieldName: fieldName,
+          value: sms,
           type: DataType.other)
     ];
   }
@@ -181,6 +193,9 @@ List<ParsedValue> getData(String value) {
 }
 
 Cubacel fromUssd(String consult1, String consult2) {
+  print(consult1);
+  print(consult2);
+
   List<String> data = consult1.split('. ');
 
   List<String> data2 = consult2.split(':');
@@ -219,6 +234,8 @@ Cubacel fromUssd(String consult1, String consult2) {
         break;
     }
   }
+
+  print(otherFields);
 
   Cubacel cubacel = Cubacel.fromJson({
     'internet': internetFields,
