@@ -6,5 +6,11 @@ run:
 gen-models:
 	$(FLUTTER) pub run build_runner build --delete-conflicting-outputs
 
-bluid:
-	$(FLUTTER) build apk
+build-apk:
+	$(FLUTTER) build apk --split-per-abi
+
+install:
+	$(FLUTTER) install
+
+clean:
+	$(flutter) clean
