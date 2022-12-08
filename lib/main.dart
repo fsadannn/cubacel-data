@@ -8,12 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
-
-// ignore: import_of_legacy_library_into_null_safe
-import 'package:sim_data/sim_data.dart';
-
-// ignore: import_of_legacy_library_into_null_safe
-import 'package:ussd_service/ussd_service.dart';
+import 'package:sim_data_plus/sim_data.dart';
+import 'package:ussd_advanced/ussd_advanced.dart';
 
 import 'models/all.dart';
 
@@ -38,7 +34,7 @@ Future<int> getSimCardsData() async {
     /*simData.cards.forEach((SimCard s) {
       print('Serial number: ${s.subscriptionId}');
     });*/
-    return simData.cards.first.subscriptionId;
+    return simData.cards.first.subscriptionId!;
   } catch (e) {
     print(e);
     return 0;
@@ -51,11 +47,9 @@ Future<String> makeUSSDRequest(String code, int? subscriptionId) async {
   }
 
   try {
-    String ussdResponseMessage = await UssdService.makeRequest(
-      subscriptionId,
-      code,
-      Duration(seconds: 10), // timeout (optional) - default is 10 seconds
-    );
+    String ussdResponseMessage = (await UssdAdvanced.sendAdvancedUssd(
+        code: code, subscriptionId: subscriptionId))!;
+
     //print("succes! message: $ussdResponseMessage");
     return ussdResponseMessage;
   } catch (e) {
@@ -77,13 +71,15 @@ Future<Cubacel> getCubacelData() async {
   //subscription = 0;
   String response = await makeUSSDRequest("*222#", subscription);
   String response2 = await makeUSSDRequest("*222*266#", subscription);
-
+  String response3 = await makeUSSDRequest("*222*328#", subscription);
   /*String response =
       "Saldo: 435.54 CUP. Datos: 1.3 GB + 404.32 MB LTE. Voz: 00:08:44. SMS: 150. Linea activa hasta 06-09-22 vence 06-10-22.";
   String response2 =
-      "Bono->vence: Datos 453.75 MB->10-11-21. MIN 00:27:11->10-11-21. Datos.cu 100.00 MB->10-11-21.";*/
+      "Bono->vence: Datos 453.75 MB->10-11-21. MIN 00:27:11->10-11-21. Datos.cu 100.00 MB->10-11-21.";
+  String response3 =
+  Tarifa: No activa. Paquetes: 2.74 GB + 1.67 GB LTE validos 27 dias. */
 
-  Cubacel cubacel = fromUssd(response, response2);
+  Cubacel cubacel = fromUssd(response, response2, response3);
 
   return cubacel;
 }
@@ -117,8 +113,10 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(child: MyApp(), overrides: [
-      dataProvider.overrideWithProvider(StateProvider<Cubacel>((_) => r)),
-      prevDataProvider.overrideWithProvider(StateProvider<Cubacel>((_) => r2))
+      dataProvider.overrideWith((ref) => r),
+      //dataProvider.overrideWithProvider(StateProvider<Cubacel>((_) => r)),
+      prevDataProvider.overrideWith((_) => r2)
+      //prevDataProvider.overrideWithProvider(StateProvider<Cubacel>((_) => r2))
     ]),
   );
 }
@@ -160,10 +158,10 @@ class MyHomePage extends ConsumerWidget {
   MyHomePage({required this.title, Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, ScopedReader watch) {
-    final bool loading = watch(loadingProvider).state;
-    final Cubacel currentData = watch(dataProvider).state;
-    final Cubacel prevData = watch(prevDataProvider).state;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool loading = ref.watch(loadingProvider);
+    final Cubacel currentData = ref.watch(dataProvider);
+    final Cubacel prevData = ref.watch(prevDataProvider);
     final Cubacel delta = computeDelta(currentData, prevData);
 
     return Scaffold(
@@ -182,11 +180,11 @@ class MyHomePage extends ConsumerWidget {
                     context, currentData, delta, prevData.date),
           ),
           onRefresh: () async {
-            await updateData(context, currentData);
+            await updateData(ref, currentData);
           }),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await updateData(context, currentData);
+          await updateData(ref, currentData);
         },
         tooltip: 'Increment',
         child: Icon(Icons.add),
@@ -401,8 +399,8 @@ class MyHomePage extends ConsumerWidget {
     );
   }
 
-  Future<void> updateData(BuildContext context, Cubacel currentData) async {
-    context.read(loadingProvider).state = true;
+  Future<void> updateData(WidgetRef ref, Cubacel currentData) async {
+    ref.read(loadingProvider.notifier).state = true;
     Cubacel cData;
     try {
       cData = await getCubacelData();
@@ -417,8 +415,8 @@ class MyHomePage extends ConsumerWidget {
       await store.record(prevDataKey).put(txn, currentData.toJson());
     });
 
-    context.read(dataProvider).state = cData;
-    context.read(prevDataProvider).state = currentData;
-    context.read(loadingProvider).state = false;
+    ref.read(dataProvider.notifier).state = cData;
+    ref.read(prevDataProvider.notifier).state = currentData;
+    ref.read(loadingProvider.notifier).state = false;
   }
 }

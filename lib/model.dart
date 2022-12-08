@@ -87,6 +87,10 @@ List<ParsedValue> getData(String value) {
     List<String> val =
         dd[1].split('+').map((String e) => e.split(' ')[1].trim()).toList();
 
+    List<String> test = dd[1].trim().split(' ');
+    bool is_bonus = RegExp('[0-9][0-9]-[0-9][0-9]-[0-9][0-9]')
+        .hasMatch(test[test.length - 1]);
+
     if (val.length == 1) {
       if (dd[1].contains("LTE")) {
         val = ['0', val[0]];
@@ -99,12 +103,12 @@ List<ParsedValue> getData(String value) {
     return [
       ParsedValue(
           unit: value_unit[0],
-          fieldName: 'all_networks',
+          fieldName: is_bonus ? 'promotional_data' : 'all_networks',
           value: num.parse(val[0].trim()),
           type: DataType.internet),
       ParsedValue(
           unit: value_unit[1],
-          fieldName: 'only_lte',
+          fieldName: is_bonus ? 'promotional_data_lte' : 'only_lte',
           value: num.parse(val[1].trim()),
           type: DataType.internet)
     ];
@@ -113,7 +117,10 @@ List<ParsedValue> getData(String value) {
   if (value.startsWith('Voz:')) {
     String value_unit = "MIN";
     List<String> valsp = value.split(':');
-    num mins = getMinutes(valsp.getRange(1, valsp.length).toList());
+    valsp = valsp.getRange(1, valsp.length).toList();
+    valsp[valsp.length - 1] = valsp[valsp.length - 1].split(' ')[0];
+
+    num mins = getMinutes(valsp);
 
     return [
       ParsedValue(
@@ -192,19 +199,20 @@ List<ParsedValue> getData(String value) {
   return [];
 }
 
-Cubacel fromUssd(String consult1, String consult2) {
+Cubacel fromUssd(String consult1, String consult2,String consult3) {
   print(consult1);
   print(consult2);
+  print(consult3);
 
   List<String> data = consult1.split('. ');
 
-  List<String> data2 = consult2.split(':');
-  if (data2.length > 1) {
-    data2 = data2.getRange(1, data2.length).join(':').trim().split('. ');
-  }
+  List<String> data2 = consult2.split('. ');
+  
+  List<String> data3 = consult3.split('. ').sublist(1);
 
   List<ParsedValue> pData = [];
   List<ParsedValue> ppData = [];
+  List<ParsedValue> apData = [];
 
   for (String datav in data) {
     ppData = getData(datav.trim());
@@ -235,7 +243,7 @@ Cubacel fromUssd(String consult1, String consult2) {
     }
   }
 
-  print(otherFields);
+  print(internetFields);
 
   Cubacel cubacel = Cubacel.fromJson({
     'internet': internetFields,
@@ -272,4 +280,27 @@ Cubacel computeDelta(Cubacel now, Cubacel prev) {
       Cubacel.fromJson({'internet': iNow, 'credit': cNow, 'others': oNow});
 
   return delta;
+}
+
+void updateData(Map<String, num> internetFields,List<String> data3){
+  List<String> fields = [];
+
+  for (String value in data3) {
+    if (value.startsWith('Paquetes:')) {
+      List<String> dd = value.split(':');
+
+      List<String> test = dd[1].trim().split(' ');
+      bool is_bonus = RegExp('[0-9][0-9]-[0-9][0-9]-[0-9][0-9]')
+          .hasMatch(test[test.length - 1]);
+
+      fields.add(is_bonus ? 'promotional_data' : 'all_networks');
+      fields.add(is_bonus ? 'promotional_data_lte' : 'only_lte');
+    }
+  }
+
+  for(String field in fields){
+     // if(internetFields.containsKey(field))
+    
+  }
+  
 }

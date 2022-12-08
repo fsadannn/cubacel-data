@@ -24,7 +24,7 @@ Map<String, dynamic> _$ParsedValueToJson(ParsedValue instance) =>
       'unit': instance.unit,
       'fieldName': instance.fieldName,
       'value': instance.value,
-      'type': _$DataTypeEnumMap[instance.type],
+      'type': _$DataTypeEnumMap[instance.type]!,
     };
 
 const _$DataTypeEnumMap = {

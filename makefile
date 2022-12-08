@@ -1,13 +1,13 @@
 FLUTTER=flutter
 
 run:
-	$(FLUTTER) run -vv --no-sound-null-safety
+	$(FLUTTER) run -vv
 
 gen-models:
 	$(FLUTTER) pub run build_runner build --delete-conflicting-outputs
 
 build-apk:
-	$(FLUTTER) build apk --split-per-abi
+	$(FLUTTER) build apk -vv --split-per-abi
 
 install:
 	$(FLUTTER) install
