@@ -63,8 +63,9 @@ num toMB(num value, String unit) {
   return value;
 }
 
-List<ParsedValue> getData(String value) {
+List<ParsedValue> getData(String value, bool isDatos) {
   // TODO: parse credit bonus
+  print('getData');
   print(value);
 
   if (value.startsWith('Saldo:')) {
@@ -79,17 +80,25 @@ List<ParsedValue> getData(String value) {
     ];
   }
 
-  if (value.startsWith('Datos:')) {
+  if (value.startsWith('Datos:') || isDatos) {
     // TODO: test the case when only one of the network type exist like only LTE
-    List<String> dd = value.split(':');
+    List<String> dd = [];
+    if (isDatos) {
+      dd = ['', ' ' + value.split(' ').sublist(0, 2).join(' ')];
+    } else {
+      dd = value.split(':');
+    }
+
     List<String> value_unit =
         dd[1].split('+').map((String e) => e.split(' ')[2].trim()).toList();
+
     List<String> val =
         dd[1].split('+').map((String e) => e.split(' ')[1].trim()).toList();
 
     List<String> test = dd[1].trim().split(' ');
     bool is_bonus = RegExp('[0-9][0-9]-[0-9][0-9]-[0-9][0-9]')
-        .hasMatch(test[test.length - 1]);
+            .hasMatch(test[test.length - 1]) ||
+        isDatos;
 
     if (val.length == 1) {
       if (dd[1].contains("LTE")) {
@@ -199,7 +208,7 @@ List<ParsedValue> getData(String value) {
   return [];
 }
 
-Cubacel fromUssd(String consult1, String consult2,String consult3) {
+Cubacel fromUssd(String consult1, String consult2, String consult3) {
   print(consult1);
   print(consult2);
   print(consult3);
@@ -207,21 +216,38 @@ Cubacel fromUssd(String consult1, String consult2,String consult3) {
   List<String> data = consult1.split('. ');
 
   List<String> data2 = consult2.split('. ');
-  
-  List<String> data3 = consult3.split('. ').sublist(1);
+
+  //List<String> data3 = consult3.split('. ').sublist(1);
 
   List<ParsedValue> pData = [];
   List<ParsedValue> ppData = [];
   List<ParsedValue> apData = [];
 
   for (String datav in data) {
-    ppData = getData(datav.trim());
+    ppData = getData(datav.trim(), false);
     pData.addAll(ppData);
   }
 
+  bool has_unlimited = false;
+  bool is_next_has_unlimited = false;
   for (String datav in data2) {
-    ppData = getData(datav.trim());
+    if (datav.contains('ilimitado')) {
+      has_unlimited = true;
+      is_next_has_unlimited = true;
+      continue;
+    }
+
+    if (is_next_has_unlimited && !RegExp('[0-9]+?\.?[0-9]+?').hasMatch(datav)) {
+      is_next_has_unlimited = false;
+    }
+
+    ppData = getData(datav.trim(), has_unlimited && is_next_has_unlimited);
     pData.addAll(ppData);
+
+    if (is_next_has_unlimited) {
+      is_next_has_unlimited = false;
+      has_unlimited = false;
+    }
   }
 
   Map<String, num> internetFields = {};
@@ -243,7 +269,7 @@ Cubacel fromUssd(String consult1, String consult2,String consult3) {
     }
   }
 
-  print(internetFields);
+  //print(internetFields);
 
   Cubacel cubacel = Cubacel.fromJson({
     'internet': internetFields,
@@ -282,7 +308,7 @@ Cubacel computeDelta(Cubacel now, Cubacel prev) {
   return delta;
 }
 
-void updateData(Map<String, num> internetFields,List<String> data3){
+/*void updateData(Map<String, num> internetFields, List<String> data3) {
   List<String> fields = [];
 
   for (String value in data3) {
@@ -298,9 +324,8 @@ void updateData(Map<String, num> internetFields,List<String> data3){
     }
   }
 
-  for(String field in fields){
-     // if(internetFields.containsKey(field))
-    
+  for (String field in fields) {
+    // if(internetFields.containsKey(field))
+
   }
-  
-}
+}*/

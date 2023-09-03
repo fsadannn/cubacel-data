@@ -69,15 +69,21 @@ Future<Cubacel> getCubacelData() async {
 // Either the permission was already granted before or the user just granted it.
   subscription = await getSimCardsData();
   //subscription = 0;
-  String response = await makeUSSDRequest("*222#", subscription);
-  String response2 = await makeUSSDRequest("*222*266#", subscription);
-  String response3 = await makeUSSDRequest("*222*328#", subscription);
+  //String response = await makeUSSDRequest("*222#", subscription);
+  //String response2 = await makeUSSDRequest("*222*266#", subscription);
+  //String response3 = await makeUSSDRequest("*222*328#", subscription);
   /*String response =
       "Saldo: 435.54 CUP. Datos: 1.3 GB + 404.32 MB LTE. Voz: 00:08:44. SMS: 150. Linea activa hasta 06-09-22 vence 06-10-22.";
   String response2 =
       "Bono->vence: Datos 453.75 MB->10-11-21. MIN 00:27:11->10-11-21. Datos.cu 100.00 MB->10-11-21.";
   String response3 =
   Tarifa: No activa. Paquetes: 2.74 GB + 1.67 GB LTE validos 27 dias. */
+  String response =
+      'Saldo: 731.53 CUP. Datos: 2.82 GB. Voz: 01:08:35. SMS: 2180. Linea activa hasta 18-07-24 vence 17-08-24.';
+  String response2 =
+      'Datos: ilimitados vence 22-09-23. 10.09 GB vence 22-09-23. Datos.cu 268 MB vence 22-09-23.';
+
+  String response3 = '';
 
   Cubacel cubacel = fromUssd(response, response2, response3);
 
