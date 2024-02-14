@@ -74,10 +74,10 @@ Future<Cubacel> getCubacelData() async {
   // String response3 = await makeUSSDRequest("*222*328#", subscription);
   /*String response3 =
   Tarifa: No activa. Paquetes: 2.74 GB + 1.67 GB LTE validos 27 dias. */
-  // String response =
-  //     'Saldo: 731.53 CUP. Datos: 2.82 GB. Voz: 01:08:35. SMS: 2180. Linea activa hasta 18-07-24 vence 17-08-24.';
-  // String response2 =
-  //     'Datos: ilimitados vence 22-09-23. 10.09 GB vence 22-09-23. Datos.cu 268 MB vence 22-09-23.';
+  //String response =
+  //    'Saldo: 526.53 CUP. Datos: 1.21 GB. Voz: 00:23:27. SMS: 2177. Linea activa hasta 18-07-24 vence 17-08-24.';
+  //String response2 =
+  //    'Datos: ilimitados vence 22-09-23. Datos.cu 266 MB vence 22-09-23.';
 
   String response3 = '';
 

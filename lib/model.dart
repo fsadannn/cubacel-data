@@ -80,7 +80,7 @@ List<ParsedValue> getData(String value, bool isDatos) {
     ];
   }
 
-  if (value.startsWith('Datos:') || isDatos) {
+  if ((value.startsWith('Datos:') || isDatos) && !value.startsWith('Datos\.')) {
     // TODO: test the case when only one of the network type exist like only LTE
     List<String> dd = [];
     if (isDatos) {
@@ -170,7 +170,7 @@ List<ParsedValue> getData(String value, bool isDatos) {
     return [
       ParsedValue(
           unit: dat[2],
-          fieldName: value.startsWith('Datos.cu')
+          fieldName: value.startsWith('Datos\.cu')
               ? 'national_data'
               : 'promotional_data',
           value: num.parse(dat[1].trim()),
